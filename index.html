@@ -304,16 +304,9 @@ body{font-family:-apple-system,'PingFang SC',sans-serif;background:var(--bg);min
 </nav>
 
 <script>
-// ============ Supabase 初始化 ============
-function initSupabase(){
-  const realClient = window.supabase.createClient(
-    'https://ywcaswhwvophotfjkwjk.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Y2Fzd2h3dm9waG90Zmprd2prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODYzMzIsImV4cCI6MjA5MzQ2MjMzMn0.8YjAaiLYoAIYRU3hXOfm2ha-2MUyebUW2N-oOT9sd_k'
-  );
-  supabase = realClient;
-  console.log('✅ Supabase 已连接');
-  loadFromCloud();
-}
+// Supabase 离线模式 — 云端同步暂不可用
+// function initSupabase 已移至顶部（空函数），本地存储正常使用
+
 
 // ============ 数据管理 ============
 const LS = {

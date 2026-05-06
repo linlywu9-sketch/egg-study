@@ -833,15 +833,15 @@ async function aiCheckHomework(){
   toast('🤖 AI 正在识别并逐题批改（约10-20秒）...');
   try{
     const compressed=await compressImage(hwCurrentUrl,1024,0.7);
-    // 直接调用 Gemini API（GitHub Pages 无后端）
+    const GEMINI_KEY='AIzaSyAVOH8n4zwDOeJzTIloILcSzFy3LyO9Tyc';
     let mimeType='image/jpeg',b64=compressed;
     const m=compressed.match(/^data:(image\/\w+);base64,(.+)$/);
     if(m){mimeType=m[1];b64=m[2];}
-    const gResp=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=AIzaSyAVOH8n4zwDOeJzTIloILcSzFy3LyO9Tyc',{
+    const GEMINI_PROMPT='你是一位耐心的初中老师。请仔细观察图片中的作业：1.识别所有题目 2.判断每题答案对错 3.错题给出正确答案和解释。严格返回JSON格式（不要markdown标记）：{"problems":[{"num":1,"question":"","student_answer":"","correct_answer":"","is_correct":true,"explanation":""}],"summary":"总体评价","total":0,"correct_count":0}。如果看不清标注看不清，无法识别返回空problems。只返回JSON。';
+    const gResp=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key='+GEMINI_KEY,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({generationConfig:{temperature:0,topP:1,topK:1},
-        contents:[{parts:[{inlineData:{mimeType,b64}},
-          {text:'你是一位耐心的初中老师。请仔细观察图片中的作业，完成以下任务：\n\n1. 识别图片中所有的题目（数学题、英语题、语文题等）\n2. 对于每道题，判断学生写的答案是否正确\n3. 如果答案错误，给出正确答案和简单解释\n\n请严格按以下 JSON 格式返回（不要包含 markdown 代码块标记，只返回纯 JSON）：\n\n{\n  "problems": [\n    {\n      "num": 1,\n      "question": "题目简述",\n      "student_answer": "学生写的答案",\n      "correct_answer": "正确答案",\n      "is_correct": true,\n      "explanation": "解释（如果正确可写正确）"\n    }\n  ],\n  "summary": "总体评价，一两句话即可",\n  "total": 总题数,\n  "correct_count": 做对题数\n}\n\n注意：\n- 务必客观判断，不要猜测不确定的答案\n- 同一张图片每次批改结果应完全一致\n- 如果看不清某些内容，在对应字段标注"看不清"\n- 如果图片中没有题目或无法识别，返回空 problems 数组并在 summary 说明\n- 只返回 JSON，不要任何其他文字'}]}]}
+        contents:[{parts:[{inlineData:{mimeType,b64}},{text:GEMINI_PROMPT}]}]
       })
     });
     if(!gResp.ok){throw new Error('Gemini API 错误 ('+gResp.status+')')}

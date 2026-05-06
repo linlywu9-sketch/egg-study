@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>🥚 学习蛋仔 — 闯关学习</title>
 <script>
-// Supabase 客户端（CDN 失败时自动降级为离线模式）
+// 离线模式（无远端 CDN，纯本地存储）
 let supabaseReady=false;
 let supabase={storage:{from:()=>({upload:async()=>({error:new Error()}),getPublicUrl:()=>({publicUrl:''})})},from:()=>({upsert:async()=>{},insert:async()=>{},select:async()=>({data:[]})})};
+let initSupabase=()=>{};
 </script>
-<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="supabaseReady=true;initSupabase()" onerror="console.log('Supabase CDN不可用，使用离线模式')"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{

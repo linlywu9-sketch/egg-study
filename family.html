@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🏠 家庭大作战 · 时间管理 PK</title>
+<script>
+let supabaseReady=false;
+let supabase={storage:{from:()=>({upload:async()=>({error:new Error()}),getPublicUrl:()=>({publicUrl:''})})},from:()=>({upsert:async()=>{},insert:async()=>{},select:async()=>({data:[]})})};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="supabaseReady=true;initSupabase()" onerror="console.log('离线模式')"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --dad:#4ECDC4;--dad2:#2FB5AC;--mom:#FF6B9D;--mom2:#FF3B6E;--kid:#FFB800;--kid2:#E6A500;
+  --coral:#FF8C69;--purple:#A78BFA;--rose:#E85D75;--bg:#FFFBEB;--card:#fff;--text:#3a2a2a;--sub:#8b7b7b;
+  --shadow:0 4px 0 #e8e0d8;
+}
+body{font-family:-apple-system,'PingFang SC','ZCOOL KuaiLe',sans-serif;background:var(--bg);min-height:100vh;overflow-x:hidden}
+.app{max-width:480px;margin:0 auto;padding:12px 16px 100px}
+
+/* ===== 顶栏 ===== */
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 0;margin-bottom:8px}
+.app-title{font-size:20px;font-weight:900;background:linear-gradient(135deg,var(--mom),var(--coral),var(--kid));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.user-badge{display:flex;align-items:center;gap:6px;background:var(--card);padding:5px 12px;border-radius:20px;box-shadow:var(--shadow);cursor:pointer;font-size:13px;font-weight:700}
+.user-badge .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ===== 身份选择面板 ===== */
+.login-panel{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
+.login-panel.show{display:flex}
+.login-card{background:var(--card);padding:28px 24px;border-radius:28px;text-align:center;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.login-card h3{font-size:22px;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--sub);margin-bottom:18px}
+.login-avatars{display:flex;justify-content:center;gap:16px}
+.login-av{width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:32px;font-weight:800;color:#fff;box-shadow:0 6px 0 rgba(0,0,0,0.15)}
+.login-av:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,0.15)}
+.login-av.dad{background:var(--dad)}
+.login-av.mom{background:var(--mom)}
+.login-av.kid{background:var(--kid);color:#7C5E00}
+.login-av small{font-size:10px;font-weight:600;margin-top:2px}
+
+/* ===== 导航 ===== */
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;justify-content:space-around;padding:5px 0 16px;box-shadow:0 -2px 16px rgba(0,0,0,0.06);z-index:100;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:none;background:none;font-size:10px;color:var(--sub);cursor:pointer;transition:all 0.2s}
+.nav-item.active{color:var(--purple);font-weight:700}
+.nav-icon{font-size:22px;transition:transform 0.2s}
+.nav-item.active .nav-icon{transform:scale(1.15)}
+
+/* ===== 面板 ===== */
+.panel{display:none;animation:fadeIn 0.3s ease}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== 仪表盘 ===== */
+.dash-hero{text-align:center;padding:8px 0 14px}
+.dash-hero h2{font-size:18px;color:var(--text)}
+.dash-hero .today-label{font-size:12px;color:var(--sub);margin:4px 0}
+.rank-bar{display:flex;gap:8px;justify-content:center;align-items:flex-end;margin-bottom:16px;min-height:160px}
+.rank-col{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.rank-col .crown{font-size:22px;margin-bottom:-8px}
+.rank-col .bar-wrap{position:relative;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.rank-col .bar{width:70%;border-radius:14px 14px 6px 6px;transition:all 0.8s cubic-bezier(0.34,1.56,0.64,1);position:relative}
+.rank-col .bar-score{position:absolute;bottom:100%;font-weight:900;font-size:16px;padding-bottom:2px}
+.rank-col .bar-label{font-weight:700;font-size:13px;margin-top:6px}
+.rank-col .bar-sub{font-size:10px;color:var(--sub)}
+
+.quick-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.qs-card{background:var(--card);padding:12px;border-radius:16px;text-align:center;box-shadow:var(--shadow)}
+.qs-num{font-size:24px;font-weight:900}
+.qs-label{font-size:11px;color:var(--sub);margin-top:2px}
+
+/* ===== 任务面板 ===== */
+.task-section{margin-bottom:14px}
+.task-section h3{font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.task-card{background:var(--card);padding:12px 14px;border-radius:16px;display:flex;align-items:center;gap:10px;margin-bottom:8px;box-shadow:var(--shadow);transition:all 0.2s}
+.task-card.done{opacity:0.5;background:#f0fdf0}
+.task-check{width:28px;height:28px;border-radius:50%;border:3px solid #ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:14px}
+.task-card.done .task-check{background:#6bcb77;border-color:#6bcb77;color:#fff}
+.task-info{flex:1}
+.task-name{font-weight:600;font-size:14px}
+.task-desc{font-size:11px;color:var(--sub)}
+.task-pts{font-size:13px;font-weight:700;min-width:36px;text-align:center}
+
+/* ===== PK面板 ===== */
+.pk-header{text-align:center;padding:10px 0}
+.pk-title{font-size:18px;font-weight:900}
+.pk-sub{font-size:12px;color:var(--sub)}
+.pk-podium{display:flex;gap:6px;justify-content:center;align-items:flex-end;margin:16px 0;min-height:130px}
+.pk-spot{flex:1;max-width:100px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.pk-spot .medal{font-size:28px}
+.pk-spot .podium-bar{width:60%;border-radius:12px 12px 4px 4px;transition:all 0.6s ease}
+.pk-spot .pname{font-weight:700;font-size:13px;margin-top:4px}
+.pk-spot .pscore{font-size:11px;color:var(--sub)}
+.pk-records{background:var(--card);padding:14px;border-radius:18px;box-shadow:var(--shadow);margin-top:10px}
+.pk-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+
+/* ===== 规则面板 ===== */
+.rule-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.rule-card{background:var(--card);padding:12px 10px;border-radius:16px;text-align:center;box-shadow:var(--shadow)}
+.rule-card .r-avatar{width:40px;height:40px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.rule-card .r-name{font-weight:700;font-size:13px;margin-bottom:4px}
+.rule-card .r-max{font-size:20px;font-weight:900;margin-bottom:6px}
+.rule-card .r-items{font-size:10px;color:var(--sub);line-height:1.6}
+
+/* ===== 挑战 & 惩罚 ===== */
+.challenge-box{background:linear-gradient(135deg,#FFF3E0,#FFF8E1);padding:16px;border-radius:18px;margin-bottom:12px;box-shadow:0 3px 0 #e8d0a0}
+.challenge-box h3{font-size:16px;margin-bottom:8px}
+.challenge-goal{font-size:14px;font-weight:600;margin-bottom:6px}
+.challenge-progress{display:flex;align-items:center;gap:8px;margin:10px 0}
+.progress-bar{flex:1;height:12px;background:#e8e0d8;border-radius:6px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--coral),var(--mom));border-radius:6px;transition:width 0.5s}
+.challenge-reward{font-size:12px;color:#BF360C;font-weight:600}
+
+.penalty-box{background:linear-gradient(135deg,#FFF0F5,#FCE4EC);padding:16px;border-radius:18px;margin-bottom:12px;box-shadow:0 3px 0 #e8c0d0}
+.penalty-box h3{font-size:16px;margin-bottom:8px}
+.penalty-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid #fce4ec}
+.penalty-item .penalty-pts{color:var(--rose);font-weight:700}
+
+/* ===== 蛋仔联动 ===== */
+.egg-link{background:linear-gradient(135deg,#E8F5E9,#F1F8E9);padding:14px;border-radius:18px;text-align:center;box-shadow:0 3px 0 #c8e6c9;margin-bottom:12px}
+.egg-link .egg-emoji{font-size:36px;animation:bounce 2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.egg-link .egg-text{font-weight:700;font-size:14px;margin-top:4px}
+.egg-link .egg-sub{font-size:11px;color:#66BB6A;margin-top:2px}
+
+/* ===== Toast ===== */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3a2a2a;color:#fff;padding:10px 22px;border-radius:28px;font-weight:700;font-size:14px;z-index:300;pointer-events:none;animation:toastIn 0.4s ease,toastOut 0.4s 2s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+/* iPad */
+@media(min-width:768px){.app{max-width:600px}.login-av{width:90px;height:90px}}
+
+/* 作息时间轴 */
+.schedule-box{background:var(--card);padding:14px 16px;border-radius:18px;box-shadow:var(--shadow);margin-bottom:14px}
+.schedule-box h3{font-size:15px;margin-bottom:10px}
+.sched-timeline{display:flex;flex-direction:column;gap:6px}
+.sched-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:12px;font-size:12px;position:relative}
+.sched-item.now{background:#FFF3E0;font-weight:700}
+.sched-time{font-weight:800;font-size:13px;min-width:48px;color:var(--coral)}
+.sched-item.now .sched-time{color:var(--coral)}
+.sched-icon{font-size:16px;min-width:24px;text-align:center}
+.sched-label{color:var(--text)}
+.sched-item.now::after{content:'◀ 现在';position:absolute;right:10px;font-size:10px;color:var(--coral);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* 运动记录 */
+.exercise-log{display:flex;align-items:center;gap:6px;margin-top:6px;padding:4px 0}
+.exercise-log input{width:56px;padding:6px;border-radius:10px;border:2px solid #e8e0d8;text-align:center;font-size:14px;font-weight:700}
+.exercise-log button{padding:6px 14px;border-radius:14px;border:none;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 3px 0 #ccc;transition:all 0.15s}
+.exercise-log button:active{transform:translateY(2px);box-shadow:0 1px 0 #ccc}
+
+/* 惩罚按钮 */
+.penalty-item{cursor:pointer;transition:all 0.15s;border-radius:10px;padding:8px 10px}
+.penalty-item:hover{background:rgba(255,107,157,0.08)}
+.penalty-item:active{transform:scale(0.98)}
+.penalty-item .penalty-btn{font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px;border:2px solid var(--rose);background:#fff;color:var(--rose);cursor:pointer;transition:all 0.15s}
+.penalty-item .penalty-btn:active{background:var(--rose);color:#fff}
+
+/* 蛋仔同步 */
+.sync-btn{display:inline-block;margin-top:8px;padding:8px 20px;border-radius:20px;background:#66BB6A;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;box-shadow:0 3px 0 #4a9e5a;transition:all 0.15s}
+.sync-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #4a9e5a}
+.sync-info{font-size:11px;color:#66BB6A;margin-top:4px}
+
+/* 星星装饰 */
+.star{position:fixed;pointer-events:none;z-index:50;animation:starFloat 1s ease-out forwards;font-size:20px}
+@keyframes starFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.5)}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- 顶栏 -->
+  <div class="top-bar">
+    <span class="app-title">🏠 家庭大作战</span>
+    <div class="user-badge" id="userBadge" onclick="showLogin()">
+      <span>👤 点击登录</span>
+    </div>
+  </div>
+
+  <!-- 身份登录 -->
+  <div class="login-panel" id="loginPanel">
+    <div class="login-card">
+      <h3>🔮 选择你的身份</h3>
+      <p class="login-sub">今天是谁在打卡？</p>
+      <div class="login-avatars">
+        <div class="login-av dad" onclick="login('dad')">👔<small>爸爸大人</small></div>
+        <div class="login-av mom" onclick="login('mom')">💖<small>妈妈大人</small></div>
+        <div class="login-av kid" onclick="login('kid')">🎮<small>宝贝玩家</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 仪表盘 -->
+  <div class="panel active" id="panel-dash">
+    <div class="dash-hero">
+      <h2>👑 今日积分排行</h2>
+      <p class="today-label" id="todayDate"></p>
+    </div>
+    <div class="rank-bar" id="rankBar"></div>
+    <div class="quick-stats" id="quickStats"></div>
+    <div class="schedule-box" id="scheduleBox"></div>
+  </div>
+
+  <!-- 任务 -->
+  <div class="panel" id="panel-tasks">
+    <div class="task-section" id="taskList"></div>
+  </div>
+
+  <!-- PK 排行榜 -->
+  <div class="panel" id="panel-pk">
+    <div class="pk-header">
+      <div class="pk-title">🏆 对战排行榜</div>
+      <div class="pk-sub" id="pkWeekLabel">本周战绩</div>
+    </div>
+    <div class="pk-podium" id="pkPodium"></div>
+    <div class="pk-records" id="pkRecords"></div>
+  </div>
+
+  <!-- 积分规则 -->
+  <div class="panel" id="panel-rules">
+    <div class="rule-grid" id="ruleGrid"></div>
+    <div class="challenge-box">
+      <h3>⚔️ 每周家庭挑战赛</h3>
+      <div class="challenge-goal">🎯 全家运动 <span id="challengeGoal">300</span> 分钟</div>
+      <div class="challenge-progress">
+        <span style="font-size:12px" id="challengeLabel">0/300</span>
+        <div class="progress-bar"><div class="progress-fill" id="challengeFill" style="width:0%"></div></div>
+      </div>
+      <div class="exercise-log">
+        <span style="font-size:12px">🏃 记录运动：</span>
+        <input type="number" id="exInput" placeholder="分钟" min="1" max="120">
+        <button onclick="logExercise()" style="background:var(--coral);color:#fff">+ 记录</button>
+      </div>
+      <div class="challenge-reward" id="challengeMsg">✅ 全员达标 → 解锁周末奖励！💥 失败全员 -50⭐</div>
+    </div>
+    <div class="penalty-box">
+      <h3>😈 违规惩罚（点击执行）</h3>
+      <div class="penalty-item" onclick="applyPenalty('phone')"><span>📵 封印时间偷玩手机</span><span class="penalty-btn">-20⭐</span></div>
+      <div class="penalty-item" onclick="applyPenalty('late')"><span>🦉 晚于 22:30 睡觉</span><span class="penalty-btn">-15⭐</span></div>
+      <div class="penalty-item" onclick="applyPenalty('nosport')"><span>🦥 连续3天不运动</span><span class="penalty-btn">-30⭐</span></div>
+      <div class="penalty-item"><span>🧹 周积分垫底</span><span>周末家务全包！</span></div>
+    </div>
+    <div class="egg-link">
+      <div class="egg-emoji">🥚⇄🏠</div>
+      <div class="egg-text">联动蛋仔派对 App</div>
+      <div class="egg-sub">任务积分双向同步，影响周末游戏时间</div>
+      <button class="sync-btn" onclick="syncEggStudy()">🔄 同步蛋仔积分</button>
+      <div class="sync-info" id="syncInfo"></div>
+    </div>
+  </div>
+
+  <!-- 导航 -->
+  <div class="nav">
+    <button class="nav-item active" data-panel="dash"><span class="nav-icon">🏠</span>仪表盘</button>
+    <button class="nav-item" data-panel="tasks"><span class="nav-icon">📋</span>任务</button>
+    <button class="nav-item" data-panel="pk"><span class="nav-icon">🏆</span>PK榜</button>
+    <button class="nav-item" data-panel="rules"><span class="nav-icon">📜</span>规则</button>
+  </div>
+</div>
+
+<script>
+// ===== 全局状态 =====
+const LS=window.localStorage;
+const DAY_MS=86400000;
+const USERS={
+  dad:{name:'爸爸大人',emoji:'👔',color:'var(--dad)',colorBg:'#E8F8F5',colorBorder:'var(--dad2)',tasks:[
+    {id:'wake',name:'早起鸟打卡',desc:'7:00前起床',pts:10},
+    {id:'sport',name:'运动时间',desc:'运动30分钟',pts:15},
+    {id:'focus',name:'专注工作',desc:'专注4小时',pts:20},
+    {id:'nophone',name:'手机封印',desc:'无手机时段达标',pts:10},
+    {id:'family',name:'亲子陪伴',desc:'陪伴家人30分钟',pts:15},
+    {id:'sleep',name:'早睡早起',desc:'22:00前睡觉',pts:10}
+  ],maxStars:80},
+  mom:{name:'妈妈大人',emoji:'💖',color:'var(--mom)',colorBg:'#FFF0F5',colorBorder:'var(--mom2)',tasks:[
+    {id:'wake',name:'早起鸟打卡',desc:'7:00前起床',pts:10},
+    {id:'sport',name:'运动时间',desc:'运动30分钟',pts:15},
+    {id:'focus',name:'专注工作',desc:'专注4小时',pts:20},
+    {id:'nophone',name:'手机封印',desc:'无手机时段达标',pts:10},
+    {id:'family',name:'亲子陪伴',desc:'陪伴家人30分钟',pts:15},
+    {id:'sleep',name:'早睡早起',desc:'22:00前睡觉',pts:10}
+  ],maxStars:80},
+  kid:{name:'宝贝玩家',emoji:'🎮',color:'var(--kid)',colorBg:'#FFFDE7',colorBorder:'var(--kid2)',tasks:[
+    {id:'study',name:'专注学习',desc:'学习2小时',pts:20},
+    {id:'sport',name:'运动时间',desc:'运动30分钟',pts:15},
+    {id:'homework',name:'作业批改',desc:'AI批改完成',pts:20},
+    {id:'nophone',name:'手机封印',desc:'无手机时段达标',pts:10},
+    {id:'chore',name:'家务小能手',desc:'完成家务任务',pts:10},
+    {id:'sleep',name:'早睡早起',desc:'21:30前睡觉',pts:10}
+  ],maxStars:85}
+};
+
+// 获取所有用户数据
+function getAllData(){
+  let data={};
+  for(let uid in USERS){
+    let raw=LS.getItem('ft_'+uid);
+    data[uid]=raw?JSON.parse(raw):defaultState(uid);
+  }
+  return data;
+}
+function defaultState(uid){
+  return {userId:uid,stars:0,totalStars:0,tasks:{},exerciseMinutes:0,penalties:[],date:today(),weeklyWins:0,streak:0,lastActive:today()};
+}
+function today(){return new Date().toISOString().slice(0,10)}
+function getData(uid){
+  let raw=LS.getItem('ft_'+uid);
+  return raw?JSON.parse(raw):defaultState(uid);
+}
+function saveData(uid,st){
+  st.updated=Date.now();
+  LS.setItem('ft_'+uid,JSON.stringify(st));
+  syncToCloud(uid,st);
+}
+
+// ===== 当前用户 =====
+let currentUser=LS.getItem('ft_current')||null;
+let currentData=currentUser?getData(currentUser):null;
+
+function login(uid){
+  currentUser=uid;
+  currentData=getData(uid);
+  if(currentData.date!==today()){
+    currentData.tasks={};
+    currentData.stars=0;
+    currentData.exerciseMinutes=0;
+    currentData.date=today();
+    currentData.lastActive=today();
+  }
+  LS.setItem('ft_current',uid);
+  saveData(uid,currentData);
+  document.getElementById('loginPanel').classList.remove('show');
+  updateUI();
+  showToast(`✨ ${USERS[uid].emoji} ${USERS[uid].name} 登录成功！`);
+}
+function showLogin(){
+  document.getElementById('loginPanel').classList.add('show');
+}
+function logout(){
+  currentUser=null;currentData=null;
+  LS.removeItem('ft_current');
+  updateUI();
+}
+
+// ===== UI 更新 =====
+function updateUI(){
+  let badge=document.getElementById('userBadge');
+  if(currentUser&&currentData){
+    let u=USERS[currentUser];
+    badge.innerHTML=`<span class="avatar" style="background:${u.color};color:#fff;font-size:16px">${u.emoji}</span><span>${u.name}</span>`;
+    badge.onclick=showLogin;
+  }else{
+    badge.innerHTML='<span>👤 点击登录</span>';
+    badge.onclick=showLogin;
+  }
+  document.getElementById('todayDate').textContent='📅 '+today()+' · 周'+
+    ['日','一','二','三','四','五','六'][new Date().getDay()];
+  renderDashboard();
+  renderSchedule();
+  renderTasks();
+  renderPK();
+  renderRules();
+  checkDailyReset();
+}
+
+function renderDashboard(){
+  let all=getAllData();
+  let sorted=Object.entries(all).sort((a,b)=>b[1].stars-a[1].stars);
+  let maxStars=Math.max(1,sorted[0][1].stars);
+  let html='';
+  sorted.forEach(([uid,st],i)=>{
+    let u=USERS[uid];
+    let h=Math.max(30,(st.stars/maxStars)*120);
+    let crown=i===0?'👑':i===1?'🥈':'🥉';
+    html+=`<div class="rank-col">
+      <div class="crown">${crown}</div>
+      <div class="bar-wrap">
+        <span class="bar-score">${st.stars}⭐</span>
+        <div class="bar" style="height:${h}px;background:${u.color}"></div>
+      </div>
+      <div class="bar-label">${u.emoji}${u.name}</div>
+      <div class="bar-sub">${countDone(st)}/6 完成</div>
+    </div>`;
+  });
+  document.getElementById('rankBar').innerHTML=html;
+
+  let stats='';
+  sorted.forEach(([uid,st])=>{
+    let u=USERS[uid];
+    stats+=`<div class="qs-card" style="border-top:3px solid ${u.color}">
+      <div class="qs-num" style="color:${u.color}">${st.stars}⭐</div>
+      <div class="qs-label">${u.emoji} ${u.name}</div>
+    </div>`;
+  });
+  document.getElementById('quickStats').innerHTML=stats;
+}
+
+function countDone(st){
+  let u=USERS[st.userId];
+  return u.tasks.filter(t=>st.tasks[t.id]).length;
+}
+
+function renderTasks(){
+  if(!currentUser||!currentData){document.getElementById('taskList').innerHTML='<div style="text-align:center;padding:40px;color:var(--sub)">请先登录 👆</div>';return}
+  let u=USERS[currentUser];
+  let done=countDone(currentData);
+  let html=`<h3>${u.emoji} 今日任务 <span style="font-size:13px;color:var(--sub);font-weight:400">${done}/6 · ${currentData.stars}/${u.maxStars}⭐</span></h3>`;
+  u.tasks.forEach(t=>{
+    let isDone=currentData.tasks[t.id];
+    html+=`<div class="task-card${isDone?' done':''}" onclick="toggleTask('${t.id}')">
+      <div class="task-check">${isDone?'✓':''}</div>
+      <div class="task-info"><div class="task-name">${t.name}</div><div class="task-desc">${t.desc}</div></div>
+      <div class="task-pts" style="color:${u.color}">+${t.pts}⭐</div>
+    </div>`;
+  });
+  document.getElementById('taskList').innerHTML=html;
+}
+
+function toggleTask(taskId){
+  if(!currentUser||!currentData)return showLogin();
+  let u=USERS[currentUser];
+  let t=u.tasks.find(x=>x.id===taskId);
+  if(!t)return;
+  let wasDone=currentData.tasks[taskId];
+  if(wasDone){delete currentData.tasks[taskId];currentData.stars-=t.pts}
+  else{currentData.tasks[taskId]=true;currentData.stars+=t.pts;spawnStar()}
+  saveData(currentUser,currentData);
+  updateUI();
+  if(!wasDone)showToast(`✅ ${t.name} +${t.pts}⭐`);
+}
+
+function renderPK(){
+  let all=getAllData();
+  let sorted=Object.entries(all).sort((a,b)=>b[1].totalStars-a[1].totalStars);
+  let maxTotal=Math.max(1,sorted[0][1].totalStars);
+  let html='';
+  sorted.forEach(([uid,st],i)=>{
+    let u=USERS[uid];
+    let h=Math.max(20,(st.totalStars/maxTotal)*80);
+    let colors=[u.color,'#ccc','#cd7f32'][i];
+    let medals=['🥇','🥈','🥉'];
+    html+=`<div class="pk-spot">
+      <div class="medal">${medals[i]}</div>
+      <div class="podium-bar" style="height:${h}px;background:${colors}"></div>
+      <div class="pname">${u.emoji}${u.name}</div>
+      <div class="pscore">${st.totalStars}⭐ 总计</div>
+    </div>`;
+  });
+  document.getElementById('pkPodium').innerHTML=html;
+
+  let records=`
+    <div class="pk-row">🏆 周冠军次数：${sorted.map(([uid,st])=>USERS[uid].emoji+' '+st.weeklyWins+'次').join(' · ')}</div>
+    <div class="pk-row">🔥 当前连胜：${sorted.map(([uid,st])=>USERS[uid].emoji+' '+st.streak+'天').join(' · ')}</div>
+    <div class="pk-row">📊 本周排名：${sorted.map(([uid,st],i)=>(i+1)+'. '+USERS[uid].name+' '+st.stars+'⭐').join(' > ')}</div>
+  `;
+  document.getElementById('pkRecords').innerHTML=records;
+}
+
+function renderRules(){
+  let html='';
+  for(let uid in USERS){
+    let u=USERS[uid];
+    let items=u.tasks.map(t=>`${t.name} +${t.pts}`).join('<br>');
+    html+=`<div class="rule-card">
+      <div class="r-avatar" style="background:${u.color}">${u.emoji}</div>
+      <div class="r-name">${u.name}</div>
+      <div class="r-max" style="color:${u.color}">${u.maxStars}⭐/天</div>
+      <div class="r-items">${items}</div>
+    </div>`;
+  }
+  document.getElementById('ruleGrid').innerHTML=html;
+  // 更新挑战进度
+  let ch=getChallengeData();
+  let goal=300;
+  let pct=Math.min(100,Math.round(ch.totalExercise/goal*100));
+  document.getElementById('challengeLabel').textContent=ch.totalExercise+'/'+goal;
+  document.getElementById('challengeFill').style.width=pct+'%';
+  if(ch.completed){
+    document.getElementById('challengeMsg').innerHTML='🎉 挑战达成！周末奖励已解锁！';
+    document.getElementById('challengeMsg').style.color='#2E7D32';
+  }
+}
+
+// ===== 作息时间轴 =====
+const SCHEDULE=[
+  {time:'07:00',icon:'🌅',label:'元气起床'},
+  {time:'07:30',icon:'🍳',label:'早餐（无手机）'},
+  {time:'08:00',icon:'💼',label:'工作 / 学习'},
+  {time:'12:00',icon:'🍱',label:'午餐休息'},
+  {time:'14:00',icon:'💼',label:'下午工作 / 学习'},
+  {time:'17:00',icon:'🏋️',label:'运动时间'},
+  {time:'19:00',icon:'🏠',label:'家庭时光'},
+  {time:'22:00',icon:'🌙',label:'晚安睡觉'}
+];
+
+function renderSchedule(){
+  let now=new Date();
+  let nowMin=now.getHours()*60+now.getMinutes();
+  let html='<h3>⏰ 全家作息表</h3><div class="sched-timeline">';
+  // 找当前时段
+  let nowIdx=-1;
+  for(let i=SCHEDULE.length-1;i>=0;i--){
+    let t=SCHEDULE[i].time.split(':');
+    let tMin=parseInt(t[0])*60+parseInt(t[1]);
+    if(nowMin>=tMin){nowIdx=i;break}
+  }
+  SCHEDULE.forEach((s,i)=>{
+    let isNow=i===nowIdx;
+    html+=`<div class="sched-item${isNow?' now':''}">
+      <span class="sched-time">${s.time}</span>
+      <span class="sched-icon">${s.icon}</span>
+      <span class="sched-label">${s.label}</span>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('scheduleBox').innerHTML=html;
+}
+
+// ===== 每周挑战 =====
+function getWeekStart(){
+  let d=new Date();d.setDate(d.getDate()-d.getDay());
+  return d.toISOString().slice(0,10);
+}
+function getChallengeData(){
+  let raw=LS.getItem('ft_challenge');
+  let ws=getWeekStart();
+  if(!raw){let c={weekStart:ws,totalExercise:0,completed:false};LS.setItem('ft_challenge',JSON.stringify(c));return c}
+  let c=JSON.parse(raw);
+  if(c.weekStart!==ws){c={weekStart:ws,totalExercise:0,completed:false};LS.setItem('ft_challenge',JSON.stringify(c))}
+  return c;
+}
+
+function logExercise(){
+  if(!currentUser||!currentData)return showLogin();
+  let inp=document.getElementById('exInput');
+  let mins=parseInt(inp.value)||0;
+  if(mins<=0||mins>120)return showToast('请输入 1-120 分钟');
+  currentData.exerciseMinutes=(currentData.exerciseMinutes||0)+mins;
+  let ch=getChallengeData();
+  ch.totalExercise+=mins;
+  if(ch.totalExercise>=300&&!ch.completed){
+    ch.completed=true;
+    showToast('🎉 挑战达成！全员达标，解锁周末奖励！');
+  }
+  LS.setItem('ft_challenge',JSON.stringify(ch));
+  saveData(currentUser,currentData);
+  inp.value='';
+  updateUI();
+  showToast('🏃 运动 +'+mins+'分钟！');
+}
+
+function applyPenalty(type){
+  if(!currentUser||!currentData)return showLogin();
+  let penalties={phone:{label:'封印偷玩手机',pts:20},late:{label:'晚于22:30睡觉',pts:15},nosport:{label:'连续3天不运动',pts:30}};
+  let p=penalties[type];
+  if(!p)return;
+  currentData.stars-=p.pts;
+  if(!currentData.penalties)currentData.penalties=[];
+  currentData.penalties.push({type,date:today()});
+  saveData(currentUser,currentData);
+  updateUI();
+  showToast('😈 '+p.label+' -'+p.pts+'⭐');
+}
+
+// ===== 蛋仔联动 =====
+async function syncEggStudy(){
+  if(!supabaseReady){document.getElementById('syncInfo').textContent='⚠️ 云端同步未就绪，刷新页面重试';return}
+  document.getElementById('syncInfo').textContent='🔄 读取中...';
+  try{
+    let {data}=await supabase.from('profiles').select('stars,state_data,level,streak').eq('id','default').single();
+    if(!data){document.getElementById('syncInfo').textContent='⚠️ 未找到蛋仔App云端数据';return}
+    let eggStars=data.stars||0;
+    let eggLevel=data.level||1;
+    let eggStreak=data.streak||0;
+    let stateData={};try{stateData=JSON.parse(data.state_data||'{}')}catch(e){}
+    let weekendUsed=0,weekendTotal=480;
+    if(stateData.shop){
+      let game30=stateData.shop.find(s=>s.id==='game30min');
+      let game1h=stateData.shop.find(s=>s.id==='game1h');
+      weekendUsed=((game30?.redeemed||0)*30)+((game1h?.redeemed||0)*60);
+    }
+    let html='🥚 蛋仔Lv.'+eggLevel+' · '+eggStars+'⭐ · 🔥'+eggStreak+'天';
+    if(currentUser==='kid'&&currentData){
+      html+='<br>🏠 家庭积分：<b>'+currentData.stars+'⭐</b> · 周末已用 <b>'+weekendUsed+'/'+weekendTotal+'</b> 分钟';
+    }
+    html+='<br><span style="font-size:10px">数据来源：Supabase 云端同步</span>';
+    document.getElementById('syncInfo').innerHTML=html;
+  }catch(e){
+    document.getElementById('syncInfo').textContent='⚠️ 同步失败：'+e.message;
+  }
+}
+
+// ===== 每日重置 =====
+function checkDailyReset(){
+  for(let uid in USERS){
+    let st=getData(uid);
+    if(st.date!==today()){
+      st.totalStars+=st.stars;
+      if(st.stars>=USERS[uid].maxStars*0.75)st.streak=(st.lastActive===yesterday()?st.streak+1:1);
+      else st.streak=0;
+      st.stars=0;
+      st.tasks={};
+      st.exerciseMinutes=0;
+      st.date=today();
+      st.lastActive=today();
+      saveData(uid,st);
+    }
+  }
+  // 每周挑战重置
+  let ch=getChallengeData();
+  let ws=getWeekStart();
+  if(ch.weekStart!==ws){
+    if(!ch.completed&&ch.totalExercise>0){
+      for(let uid in USERS){let s=getData(uid);s.stars-=50;saveData(uid,s)}
+      showToast('💥 挑战失败！全员 -50⭐');
+    }
+    ch={weekStart:ws,totalExercise:0,completed:false};
+    LS.setItem('ft_challenge',JSON.stringify(ch));
+  }
+}
+
+function yesterday(){
+  let d=new Date();d.setDate(d.getDate()-1);
+  return d.toISOString().slice(0,10);
+}
+
+// ===== Supabase 同步 =====
+let cloudSyncTimer=null;
+function initSupabase(){
+  try{
+    supabase=window.supabase.createClient(
+      'https://ywcaswhwvophotfjkwjk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Y2Fzd2h3dm9waG90Zmprd2prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0MDY3MjAsImV4cCI6MjA1ODk4MjcyMH0.FoKFy-NfsFNnGhNv7xJHCEBqjGPJxPLVwjSjJQ7kRUo'
+    );
+    loadFromCloud();
+  }catch(e){console.log('Supabase init err:',e.message)}
+}
+
+async function syncToCloud(uid,st){
+  if(!supabaseReady)return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(async()=>{
+    try{
+      await supabase.from('family_profiles').upsert({
+        user_id:uid,stars:st.stars,total_stars:st.totalStars,
+        tasks:JSON.stringify(st.tasks),date:st.date,
+        weekly_wins:st.weeklyWins,streak:st.streak,
+        last_active:st.lastActive,updated_at:new Date().toISOString()
+      });
+    }catch(e){console.log('sync err:',e.message)}
+  },500);
+}
+
+async function loadFromCloud(){
+  if(!supabaseReady)return;
+  try{
+    let {data}=await supabase.from('family_profiles').select('*');
+    if(data)data.forEach(row=>{
+      let local=getData(row.user_id);
+      let cloudTime=new Date(row.updated_at).getTime();
+      let localTime=LS.getItem('ft_'+row.user_id+'_updated')||0;
+      if(cloudTime>Number(localTime)){
+        let merged={...local,stars:row.stars,totalStars:row.total_stars,
+          tasks:row.tasks?JSON.parse(row.tasks):{},date:row.date,
+          weeklyWins:row.weekly_wins,streak:row.streak,lastActive:row.last_active};
+        saveData(row.user_id,merged);
+        LS.setItem('ft_'+row.user_id+'_updated',cloudTime);
+      }
+    });
+  }catch(e){console.log('load cloud err:',e.message)}
+}
+
+// ===== 面板切换 =====
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
+  });
+});
+
+// ===== 装饰 =====
+function spawnStar(){
+  let s=document.createElement('div');
+  s.className='star';
+  s.textContent='⭐';
+  s.style.left=(30+Math.random()*60)+'%';
+  s.style.top='40%';
+  document.body.appendChild(s);
+  setTimeout(()=>s.remove(),1000);
+}
+
+function showToast(msg){
+  let t=document.createElement('div');
+  t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2400);
+}
+
+// ===== 初始化 =====
+if(currentUser){
+  currentData=getData(currentUser);
+  if(currentData.date!==today()){
+    currentData.tasks={};currentData.stars=0;currentData.date=today();
+    saveData(currentUser,currentData);
+  }
+}
+checkDailyReset();
+updateUI();
+</script>
+</body>
+</html>

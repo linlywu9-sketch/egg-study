@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🥚 学习蛋仔 — 闯关学习</title>
+<script>
+// Supabase 客户端（CDN 失败时自动降级为离线模式）
+let supabaseReady=false;
+let supabase={storage:{from:()=>({upload:async()=>({error:new Error()}),getPublicUrl:()=>({publicUrl:''})})},from:()=>({upsert:async()=>{},insert:async()=>{},select:async()=>({data:[]})})};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="supabaseReady=true;initSupabase()" onerror="console.log('Supabase CDN不可用，使用离线模式')"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --pink:#ff6b9d;--yellow:#ffd93d;--mint:#6bcb77;--purple:#a66cff;--blue:#4d96ff;--orange:#ff9f43;
+  --bg:#fff8f0;--card:#fff;--text:#3a2a2a;--sub:#8b7b7b;
+}
+body{font-family:-apple-system,'PingFang SC',sans-serif;background:var(--bg);min-height:100vh;overflow-x:hidden}
+.app{max-width:480px;margin:0 auto;padding:16px;padding-bottom:110px}
+
+/* 头部 */
+.header{text-align:center;padding:14px 0}
+.egg-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.egg{width:60px;height:75px;background:linear-gradient(180deg,#ffe0b0 0%,#ffcc80 60%,#ffb74d 100%);border-radius:50% 50% 50% 50%/60% 60% 40% 40%;position:relative;animation:bounce 2s ease-in-out infinite;box-shadow:0 6px 0 #e69500,0 8px 16px rgba(0,0,0,0.08);flex-shrink:0}
+.egg::before{content:'';position:absolute;width:12px;height:12px;background:#3a2a2a;border-radius:50%;top:22px;left:14px;box-shadow:21px 0 0 #3a2a2a}
+.egg::after{content:'';position:absolute;width:10px;height:6px;border:2.5px solid #3a2a2a;border-radius:0 0 10px 10px;border-top:none;top:30px;left:25px}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.egg-info{text-align:left}
+.egg-name{font-weight:800;font-size:15px;color:var(--text)}
+.level-badge{display:inline-block;background:var(--pink);color:#fff;padding:3px 12px;border-radius:14px;font-size:12px;font-weight:700;box-shadow:0 3px 0 #e05585;margin-top:2px}
+.stats-row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+.stat-box{background:var(--card);padding:8px 12px;border-radius:14px;text-align:center;box-shadow:0 3px 0 #e8e0d8;min-width:56px;flex:1}
+.stat-num{font-size:20px;font-weight:800;color:var(--pink)}
+.stat-label{font-size:10px;color:var(--sub)}
+.shop-btn{position:fixed;top:14px;right:calc(50% - 230px);width:36px;height:36px;border-radius:50%;background:var(--yellow);border:none;font-size:20px;box-shadow:0 3px 0 #e6b800;cursor:pointer;z-index:50;display:flex;align-items:center;justify-content:center}
+@media(min-width:768px){.shop-btn{right:calc(50% - 280px)}}
+
+/* 底部导航 */
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;justify-content:space-around;padding:6px 0 18px;box-shadow:0 -2px 16px rgba(0,0,0,0.05);z-index:100;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 8px;border:none;background:none;font-size:10px;color:var(--sub);cursor:pointer;transition:all 0.2s}
+.nav-item.active{color:var(--purple);font-weight:700}
+.nav-icon{font-size:24px;transition:transform 0.2s}
+.nav-item.active .nav-icon{transform:scale(1.12)}
+
+/* 面板 */
+.panel{display:none}
+.panel.active{display:block;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* 首页目标 */
+.goal-bar{background:linear-gradient(135deg,#fff0f5,#f0e6ff);padding:14px;border-radius:18px;margin-bottom:16px;box-shadow:0 3px 0 #e8d8f0}
+.goal-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}
+.goal-row span{background:var(--card);padding:5px 10px;border-radius:12px;font-size:12px;font-weight:700;box-shadow:0 2px 0 #e8e0d8}
+.goal-quote{text-align:center;font-size:13px;color:var(--purple);font-weight:600}
+.timer-section{text-align:center;padding:8px 0}
+.timer-ring{width:180px;height:180px;border-radius:50%;background:conic-gradient(var(--pink) 0deg,#ffe0ec 0deg);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 6px 0 #e8e0d8}
+.timer-inner{width:152px;height:152px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 3px 10px rgba(0,0,0,0.04)}
+.timer-time{font-size:42px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.timer-state{font-size:13px;color:var(--pink);font-weight:600;margin-top:2px}
+.timer-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{background:var(--card);border:none;padding:10px 24px;border-radius:28px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 0 #e8e0d8;transition:all 0.15s;color:var(--text)}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #e8e0d8}
+.btn-primary{background:var(--pink);color:#fff;box-shadow:0 4px 0 #e05585}
+.btn-mint{background:var(--mint);color:#fff;box-shadow:0 4px 0 #4a9e5a}
+.btn-purple{background:var(--purple);color:#fff;box-shadow:0 4px 0 #8b55d9}
+.btn-yellow{background:var(--yellow);color:var(--text);box-shadow:0 4px 0 #e6b800}
+.timer-preset{display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.preset-btn{padding:6px 16px;border-radius:18px;border:2px solid #e8e0d8;background:var(--card);font-size:12px;font-weight:600;cursor:pointer;color:var(--text)}
+.preset-btn.active{border-color:var(--pink);background:#fff0f5;color:var(--pink)}
+
+/* 任务 */
+.task-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.task-score{background:var(--yellow);padding:4px 14px;border-radius:14px;font-size:13px;font-weight:700}
+.task-list{display:flex;flex-direction:column;gap:8px}
+.task-item{background:var(--card);padding:12px 14px;border-radius:14px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 0 #e8e0d8;transition:all 0.2s}
+.task-item.done{opacity:0.55;background:#f0fdf0}
+.task-check{width:26px;height:26px;border-radius:50%;border:3px solid #ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:14px}
+.task-item.done .task-check{background:var(--mint);border-color:var(--mint);color:#fff}
+.task-info{flex:1}
+.task-name{font-weight:600;font-size:14px}
+.task-subj{font-size:10px;color:var(--sub)}
+.task-points{font-size:11px;color:var(--pink);font-weight:700}
+.add-task-btn{background:var(--card);border:2px dashed #ddd;padding:12px;border-radius:14px;text-align:center;color:var(--sub);cursor:pointer;margin-top:8px;font-size:13px}
+
+/* 商店 */
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.shop-card{background:var(--card);padding:16px;border-radius:18px;text-align:center;box-shadow:0 4px 0 #e8e0d8;transition:all 0.2s}
+.shop-emoji{font-size:36px;margin-bottom:6px}
+.shop-title{font-weight:700;font-size:14px;margin-bottom:4px}
+.shop-desc{font-size:11px;color:var(--sub);margin-bottom:8px}
+.shop-cost{display:inline-block;background:var(--yellow);padding:4px 14px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:none;box-shadow:0 3px 0 #e6b800}
+.shop-cost:active{transform:translateY(2px);box-shadow:0 1px 0 #e6b800}
+.shop-owned{display:inline-block;background:#e8e0d8;padding:4px 14px;border-radius:14px;font-size:13px;font-weight:700;color:var(--sub)}
+
+/* 作业 */
+.hw-upload{background:var(--card);padding:24px;border-radius:20px;text-align:center;box-shadow:0 4px 0 #e8e0d8;margin-bottom:16px}
+.hw-upload-icon{font-size:48px;margin-bottom:8px}
+.hw-upload-btn{display:inline-block;background:var(--purple);color:#fff;padding:12px 28px;border-radius:28px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 0 #8b55d9}
+.hw-preview{max-width:100%;max-height:300px;border-radius:14px;margin:12px 0}
+.hw-selfcheck{background:var(--card);padding:16px;border-radius:16px;box-shadow:0 3px 0 #e8e0d8;margin-bottom:12px}
+.hw-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hw-check-tag{padding:6px 14px;border-radius:14px;border:2px solid #e8e0d8;font-size:12px;cursor:pointer;transition:all 0.15s}
+.hw-check-tag.checked{background:var(--mint);color:#fff;border-color:var(--mint)}
+.hw-list-item{background:var(--card);padding:12px 14px;border-radius:14px;display:flex;align-items:center;gap:10px;margin-bottom:8px;box-shadow:0 3px 0 #e8e0d8}
+.hw-list-thumb{width:50px;height:50px;border-radius:10px;object-fit:cover}
+.hw-list-info{flex:1}
+.hw-list-name{font-weight:600;font-size:13px}
+.hw-list-meta{font-size:10px;color:var(--sub)}
+
+/* 弹窗 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:150;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);padding:24px;border-radius:24px;width:90%;max-width:360px;text-align:center}
+.modal h3{font-size:20px;margin-bottom:12px}
+.modal input,.modal select{width:100%;padding:12px;border-radius:14px;border:2px solid #e8e0d8;font-size:15px;margin-bottom:10px}
+.modal-close{margin-top:8px;color:var(--sub);cursor:pointer;font-size:14px}
+
+/* 漫画 */
+.comic-box{background:linear-gradient(135deg,#fffdf5,#fff0e0);padding:14px;border-radius:18px;margin-top:14px;box-shadow:0 3px 0 #e8d8c0}
+.comic-title{font-weight:700;color:var(--orange);margin-bottom:10px;font-size:14px}
+.comic-panel{background:var(--card);border-radius:14px;padding:14px;line-height:1.7;font-size:13px}
+.comic-panel .c-char{font-size:32px;margin-right:4px}
+.comic-panel .c-speech{display:inline-block;background:#fff8e7;padding:6px 10px;border-radius:10px;margin:2px 0;border:1px dashed #e8d0a0}
+.comic-panel .c-explain{background:#f0f0ff;padding:8px 12px;border-radius:10px;margin-top:8px;font-weight:600;color:var(--purple)}
+.comic-panel .c-scene{text-align:center;font-size:11px;color:var(--sub);margin:4px 0}
+
+/* 周末管理 */
+.weekend-bar{background:linear-gradient(135deg,#e8f5e9,#fff8e1);padding:12px;border-radius:16px;margin-top:12px}
+.weekend-title{font-weight:700;font-size:14px;margin-bottom:8px}
+.weekend-stats{display:flex;gap:8px;margin-bottom:8px}
+.weekend-stat{flex:1;background:var(--card);padding:8px;border-radius:12px;text-align:center;font-size:11px}
+.weekend-stat .ws-num{font-size:20px;font-weight:800;color:var(--pink)}
+.warning-text{color:#c0392b;font-size:11px;font-weight:600}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3a2a2a;color:#fff;padding:10px 22px;border-radius:28px;font-weight:700;font-size:14px;z-index:200;pointer-events:none;animation:toastIn 0.4s ease,toastOut 0.4s 2.2s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+/* 语法/历史 */
+.quiz-card{background:var(--card);padding:18px;border-radius:18px;box-shadow:0 4px 0 #e8e0d8;margin-bottom:14px}
+.quiz-q{font-size:15px;font-weight:600;margin-bottom:14px;line-height:1.5}
+.quiz-opts{display:flex;flex-direction:column;gap:7px}
+.quiz-opt{padding:11px 14px;border-radius:12px;border:2px solid #e8e0d8;background:var(--card);text-align:left;font-size:14px;cursor:pointer;transition:all 0.15s}
+.quiz-opt:active{transform:scale(0.98)}
+.quiz-opt.correct{border-color:var(--mint);background:#f0fdf0;color:#2a6b35}
+.quiz-opt.wrong{border-color:#ff6b6b;background:#fff0f0;color:#c0392b}
+.quiz-result{text-align:center;padding:10px;font-weight:700;font-size:15px;margin-top:6px}
+.quiz-result.good{color:var(--mint)}.quiz-result.bad{color:#ff6b6b}
+.quiz-explain{background:#fffbf0;padding:10px 14px;border-radius:12px;font-size:12px;color:#8b6f47;margin-top:6px;line-height:1.6}
+
+.history-topic{display:inline-block;background:var(--yellow);padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;margin-bottom:10px}
+.timeline{position:relative;padding-left:20px;margin:10px 0}
+.timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--pink),var(--purple),var(--mint));border-radius:2px}
+.tl-item{padding:6px 0 10px;position:relative}
+.tl-item::before{content:'';position:absolute;left:-18px;top:10px;width:8px;height:8px;background:var(--purple);border-radius:50%;border:2px solid var(--card)}
+.tl-year{font-size:10px;color:var(--purple);font-weight:700}
+.tl-event{font-size:13px;font-weight:600;margin:1px 0}
+.tl-detail{font-size:11px;color:var(--sub)}
+
+/* iPad 适配 */
+@media(min-width:768px){
+  .app{max-width:600px}
+  .timer-ring{width:220px;height:220px}.timer-inner{width:186px;height:186px}.timer-time{font-size:50px}
+  .egg{width:74px;height:90px}.egg::before{width:15px;height:15px;top:28px;left:16px;box-shadow:27px 0 0 #3a2a2a}
+  .egg::after{width:12px;height:7px;top:38px;left:31px}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- 头部 -->
+  <button class="shop-btn" onclick="switchPanel('shop')" title="🏪 商店">🏪</button>
+  <div class="header">
+    <div class="egg-row">
+      <div class="egg"></div>
+      <div class="egg-info">
+        <div class="egg-name">学习蛋仔</div>
+        <div class="level-badge" id="levelBadge">🥚 Lv.1</div>
+      </div>
+    </div>
+    <div id="headerDate" style="text-align:center;font-size:12px;color:var(--sub);margin-bottom:4px"></div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="totalStars">0</div><div class="stat-label">⭐ 星星</div></div>
+      <div class="stat-box"><div class="stat-num" id="totalFocus">0</div><div class="stat-label">🔥 专注</div></div>
+      <div class="stat-box"><div class="stat-num" id="streakDays">0</div><div class="stat-label">📅 连续</div></div>
+      <div class="stat-box"><div class="stat-num" id="todayGoal">0/50</div><div class="stat-label">🎯 今日目标</div></div>
+    </div>
+  </div>
+
+  <!-- ===== 番茄钟面板 ===== -->
+  <div class="panel active" id="panel-timer">
+    <!-- 学习目标 -->
+    <div class="goal-bar">
+      <div class="goal-row">
+        <span>🎯 语文 85+</span><span>🎯 数学 85+</span><span>🎯 英语 85+</span><span>🏆 校前 90 名</span>
+      </div>
+      <div class="goal-quote" id="dailyQuote">💪 每天进步一点点，目标就会越来越近！</div>
+    </div>
+    <div id="dailyProgress" style="background:var(--card);padding:10px 14px;border-radius:14px;margin-bottom:14px;box-shadow:0 3px 0 #e8e0d8;font-size:12px;line-height:1.8"></div>
+    <div class="timer-section">
+      <div class="timer-ring" id="timerRing">
+        <div class="timer-inner">
+          <div class="timer-time" id="timerDisplay">25:00</div>
+          <div class="timer-state" id="timerState">准备开始</div>
+        </div>
+      </div>
+      <div class="timer-btns">
+        <button class="btn btn-primary" id="btnStart" onclick="toggleTimer()">▶ 开始专注</button>
+        <button class="btn" onclick="resetTimer()">↺</button>
+      </div>
+      <div class="timer-preset">
+        <button class="preset-btn active" onclick="setTimer(25)">25分钟</button>
+        <button class="preset-btn" onclick="setTimer(35)">35分钟</button>
+        <button class="preset-btn" onclick="setTimer(15)">15分钟</button>
+      </div>
+      <div style="margin-top:14px;color:var(--sub);font-size:12px">💡 离开页面会提醒你回来</div>
+    </div>
+  </div>
+
+  <!-- ===== 任务面板 ===== -->
+  <div class="panel" id="panel-tasks">
+    <div class="task-header">
+      <h3>📋 今日任务</h3>
+      <div class="task-score">⭐ <span id="taskTotal">0</span></div>
+    </div>
+    <div class="task-list" id="taskList"></div>
+    <div class="add-task-btn" onclick="openAddTask()">+ 添加任务</div>
+  </div>
+
+  <!-- ===== 语法面板 ===== -->
+  <div class="panel" id="panel-grammar">
+    <h3 style="margin-bottom:12px">🇬🇧 英语语法闯关</h3>
+    <div style="background:var(--card);padding:12px;border-radius:14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 0 #e8e0d8">
+      <span style="font-size:28px">📖</span>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px">今日背单词 <span id="wordCount" style="color:var(--purple)">0</span>/20</div>
+        <div style="font-size:10px;color:var(--sub)">达标奖励 +10⭐</div>
+      </div>
+      <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--mint);color:#fff;box-shadow:0 3px 0 #4a9e5a" onclick="addWord()">+1 词</button>
+    </div>
+    <div class="quiz-card" id="grammarCard"></div>
+    <div class="comic-box" id="grammarComic">
+      <div class="comic-title">📖 每日语法漫画</div>
+      <div class="comic-panel" id="comicContent"></div>
+    </div>
+  </div>
+
+  <!-- ===== 历史面板 ===== -->
+  <div class="panel" id="panel-history">
+    <h3 style="margin-bottom:12px">📜 历史知识闯关</h3>
+    <div class="quiz-card" id="historyCard"></div>
+    <div class="quiz-card" id="historyTimelineCard">
+      <div class="history-topic">📖 七年级历史时间线</div>
+      <div class="timeline" id="historyTimeline"></div>
+    </div>
+  </div>
+
+  <!-- ===== 商店面板 ===== -->
+  <div class="panel" id="panel-shop">
+    <h3>🏪 星星兑换商店</h3>
+    <p style="color:var(--sub);font-size:13px;margin-bottom:8px">用专注和答题赚的⭐来兑换奖励！</p>
+    <div class="shop-grid" id="shopGrid"></div>
+    <div style="margin-top:16px">
+      <h4 style="margin-bottom:8px">📜 兑换记录</h4>
+      <div id="redeemLog" style="color:var(--sub);font-size:12px"></div>
+    </div>
+  </div>
+
+  <!-- ===== 作业面板 ===== -->
+  <div class="panel" id="panel-homework">
+    <h3 style="margin-bottom:12px">📸 作业检查</h3>
+    <div class="hw-upload">
+      <div class="hw-upload-icon">📷</div>
+      <p style="font-size:14px;margin-bottom:8px;color:var(--text)">拍下当天的作业</p>
+      <p style="font-size:11px;color:var(--sub);margin-bottom:12px">拍照 → AI 自动识别题目 → 逐题批改</p>
+      <label class="hw-upload-btn">
+        📸 拍照 / 选择图片
+        <input type="file" accept="image/*" capture="environment" onchange="uploadHomework(this)" style="display:none" id="hwInput">
+      </label>
+      <div id="hwPreview" style="margin-top:12px"></div>
+    </div>
+    <h4 style="margin-bottom:8px">📋 历史作业</h4>
+    <div id="hwHistory"></div>
+  </div>
+
+  <!-- 弹窗 -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3 id="modalTitle">➕ 添加学习任务</h3>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<nav class="nav">
+  <button class="nav-item active" onclick="switchPanel('timer')"><span class="nav-icon">🍅</span>专注</button>
+  <button class="nav-item" onclick="switchPanel('tasks')"><span class="nav-icon">📋</span>任务</button>
+  <button class="nav-item" onclick="switchPanel('grammar')"><span class="nav-icon">🇬🇧</span>语法</button>
+  <button class="nav-item" onclick="switchPanel('history')"><span class="nav-icon">📜</span>历史</button>
+  <button class="nav-item" onclick="switchPanel('homework')"><span class="nav-icon">📸</span>作业</button>
+</nav>
+
+<script>
+// ============ Supabase 初始化 ============
+function initSupabase(){
+  const realClient = window.supabase.createClient(
+    'https://ywcaswhwvophotfjkwjk.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Y2Fzd2h3dm9waG90Zmprd2prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODYzMzIsImV4cCI6MjA5MzQ2MjMzMn0.8YjAaiLYoAIYRU3hXOfm2ha-2MUyebUW2N-oOT9sd_k'
+  );
+  supabase = realClient;
+  console.log('✅ Supabase 已连接');
+  loadFromCloud();
+}
+
+// ============ 数据管理 ============
+const LS = {
+  get(k,d){try{const v=localStorage.getItem('egg_'+k);return v?JSON.parse(v):d}catch{return d}},
+  set(k,v){localStorage.setItem('egg_'+k,JSON.stringify(v))}
+};
+
+let state = LS.get('state',null);
+// 版本迁移：旧版状态自动更新
+if(!state || !state.shop.find(s=>s.id==='game1h')){
+  const old = state || {};
+  state = {
+    stars:old.stars||0,level:old.level||1,focusMinutes:old.focusMinutes||0,
+    streak:old.streak||0,lastStudyDate:old.lastStudyDate||'',todayStars:old.todayStars||0,
+    tasks:[
+      {id:1,name:'语文作业 AI 批改',subj:'语文',done:false,pts:20},
+      {id:2,name:'数学作业 AI 批改',subj:'数学',done:false,pts:20},
+      {id:3,name:'英语作业 AI 批改',subj:'英语',done:false,pts:20},
+      {id:4,name:'背 20 个英语单词',subj:'英语',done:false,pts:10},
+      {id:5,name:'做 10 道语法题',subj:'英语',done:false,pts:20},
+      {id:6,name:'做 5 道历史选择题',subj:'历史',done:false,pts:10},
+    ],
+    grammarIdx:old.grammarIdx||0,historyIdx:old.historyIdx||0,
+    dailyCounters:{grammar:0,history:0,words:0},
+    shop:[
+      {id:'game30',name:'游戏30分钟',emoji:'🎮',cost:30,desc:'1⭐=1分钟，周末用',owned:0},
+      {id:'game1h',name:'游戏1小时',emoji:'🎮',cost:55,desc:'省5⭐，周末用',owned:0},
+      {id:'tv30',name:'看视频30分钟',emoji:'📺',cost:30,desc:'周末可使用',owned:0},
+      {id:'snack',name:'零食一份',emoji:'🍿',cost:20,desc:'健康小零食',owned:0},
+      {id:'gift',name:'神秘礼物',emoji:'🎁',cost:60,desc:'爸爸妈妈的小惊喜',owned:0},
+    ],
+    redeemLog:old.redeemLog||[],
+    homework:old.homework||[]
+  };
+  LS.set('state',state);
+}
+
+let hwCurrentFile=null,hwCurrentUrl=null;
+const TODAY = new Date().toDateString();
+
+function saveState(){LS.set('state',state);LS.set('state_updated',Date.now());syncToCloud();updateUI()}
+
+// Supabase 全量同步
+let cloudSyncTimer=null;
+async function syncToCloud(){
+  if(!supabaseReady)return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(async()=>{
+    try{
+      await supabase.from('profiles').upsert({
+        id:'default',
+        stars:state.stars,level:state.level,
+        focus_minutes:state.focusMinutes,streak:state.streak,
+        today_stars:state.todayStars,last_study_date:state.lastStudyDate,
+        state_data:JSON.stringify({
+          tasks:state.tasks,grammarIdx:state.grammarIdx,historyIdx:state.historyIdx,
+          dailyCounters:state.dailyCounters,shop:state.shop,
+          redeemLog:state.redeemLog,homework:state.homework
+        }),
+        updated_at:new Date().toISOString()
+      });
+    }catch(e){console.log('sync err:',e.message)}
+  },500);
+}
+
+// 从云端加载（启动时）
+async function loadFromCloud(){
+  if(!supabaseReady)return;
+  try{
+    const {data}=await supabase.from('profiles').select('*').eq('id','default').single();
+    if(!data?.updated_at)return;
+    const cloudTime=new Date(data.updated_at).getTime();
+    const localTime=LS.get('state_updated',0);
+    if(cloudTime>localTime){
+      state.stars=data.stars||state.stars;
+      state.level=data.level||state.level;
+      state.focusMinutes=data.focus_minutes||state.focusMinutes;
+      state.streak=data.streak||state.streak;
+      state.todayStars=data.today_stars||state.todayStars;
+      state.lastStudyDate=data.last_study_date||state.lastStudyDate;
+      if(data.state_data){
+        try{
+          const sd=JSON.parse(data.state_data);
+          if(sd.tasks)state.tasks=sd.tasks;
+          if(sd.grammarIdx!=null)state.grammarIdx=sd.grammarIdx;
+          if(sd.historyIdx!=null)state.historyIdx=sd.historyIdx;
+          if(sd.dailyCounters)state.dailyCounters=sd.dailyCounters;
+          if(sd.shop)state.shop=sd.shop;
+          if(sd.redeemLog)state.redeemLog=sd.redeemLog;
+          if(sd.homework)state.homework=sd.homework;
+        }catch(e){}
+      }
+      LS.set('state_updated',cloudTime);
+      LS.set('state',state);
+    }
+  }catch(e){console.log('load cloud err:',e.message)}
+}
+
+async function logFocusSession(min,stars){
+  try{await supabase.from('focus_sessions').insert({minutes:min,stars_earned:stars})}catch(e){}
+}
+
+async function logTask(name,subj,pts){
+  try{await supabase.from('tasks').insert({name,subject:subj,done:true,task_date:TODAY,stars_earned:pts})}catch(e){}
+}
+
+async function logQuiz(type,question,correct){
+  try{await supabase.from('quiz_log').insert({type,question,correct})}catch(e){}
+}
+
+// ============ 星星 & 升级 ============
+function addStars(n,reason){
+  state.stars+=n;state.todayStars+=n;
+  const lv=Math.floor(state.stars/100)+1;
+  if(lv>state.level){state.level=lv;toast('🎉 升级！Lv.'+lv+' 🎉')}
+  saveState();updateUI();
+  if(n>=10)toast(reason||('+'+n+'⭐'));
+}
+
+function spendStars(n){if(state.stars>=n){state.stars-=n;saveState();updateUI();return true}return false}
+
+// ============ Toast ============
+function toast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2700);
+}
+
+// ============ 番茄钟 ============
+let timerTotal=25*60,timerLeft=25*60,timerRunning=false,timerInterval=null;
+
+function updateTimerDisplay(){
+  const m=Math.floor(timerLeft/60),s=timerLeft%60;
+  document.getElementById('timerDisplay').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  const pct=(timerTotal-timerLeft)/timerTotal*360;
+  document.getElementById('timerRing').style.background=`conic-gradient(var(--pink) ${pct}deg, #ffe0ec ${pct}deg)`;
+}
+
+function setTimer(min){
+  if(timerRunning)return;
+  timerTotal=min*60;timerLeft=timerTotal;updateTimerDisplay();
+  document.getElementById('timerState').textContent='准备开始';
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function toggleTimer(){timerRunning?pauseTimer():startTimer()}
+function startTimer(){
+  timerRunning=true;
+  document.getElementById('btnStart').textContent='⏸ 暂停';
+  document.getElementById('timerState').textContent='🔥 专注中...';
+  timerInterval=setInterval(()=>{if(timerLeft<=0){finishTimer();return}timerLeft--;updateTimerDisplay()},1000);
+}
+function pauseTimer(){
+  timerRunning=false;clearInterval(timerInterval);
+  document.getElementById('btnStart').textContent='▶ 继续';
+  document.getElementById('timerState').textContent='⏸ 已暂停';
+}
+function resetTimer(){
+  pauseTimer();timerLeft=timerTotal;updateTimerDisplay();
+  document.getElementById('btnStart').textContent='▶ 开始专注';
+  document.getElementById('timerState').textContent='准备开始';
+}
+function finishTimer(){
+  clearInterval(timerInterval);timerRunning=false;
+  const earned=Math.floor(timerTotal/60);
+  state.focusMinutes+=earned;addStars(earned,'🔥 专注'+earned+'分钟 +'+earned+'⭐');
+  logFocusSession(earned,earned);
+  document.getElementById('timerState').textContent='🎉 太棒了！';
+  document.getElementById('btnStart').textContent='▶ 再来一次';
+  timerLeft=timerTotal;updateTimerDisplay();
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden && timerRunning){
+    setTimeout(()=>{if(document.hidden)toast('👀 快回来！专注还没结束~')},4000);
+  }
+});
+
+// ============ 任务系统 ============
+function renderTasks(){
+  const list=document.getElementById('taskList');
+  let total=0;
+  list.innerHTML=state.tasks.map(t=>{
+    if(!t.done)total+=t.pts;
+    return `<div class="task-item ${t.done?'done':''}">
+      <div class="task-check" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
+      <div class="task-info"><div class="task-name">${t.name}</div><div class="task-subj">${t.subj}</div></div>
+      <div class="task-points">+${t.pts}⭐</div>
+    </div>`;
+  }).join('');
+  document.getElementById('taskTotal').textContent=total;
+}
+
+function toggleTask(id){
+  const t=state.tasks.find(t=>t.id===id);if(!t)return;
+  t.done=!t.done;
+  if(t.done){addStars(t.pts,'✅ '+t.name);logTask(t.name,t.subj,t.pts)}
+  renderTasks();saveState();
+}
+
+function openAddTask(){
+  const ov=document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent='➕ 添加学习任务';
+  document.getElementById('modalContent').innerHTML=`
+    <input id="taskInput" placeholder="任务名称">
+    <select id="taskSubject"><option>语文</option><option>数学</option><option selected>英语</option><option>历史</option><option>地理</option><option>其他</option></select>
+    <button class="btn" style="width:100%;background:var(--pink);color:#fff;box-shadow:0 4px 0 #e05585" onclick="addTask()">✅ 添加</button>
+    <div class="modal-close" onclick="closeModal()">取消</div>
+  `;
+  ov.classList.add('show');
+}
+
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show')}
+
+function addTask(){
+  const name=document.getElementById('taskInput').value.trim();
+  const subj=document.getElementById('taskSubject').value;
+  if(!name)return;
+  state.tasks.push({id:Date.now(),name,subj,done:false,pts:10});
+  closeModal();renderTasks();saveState();toast('📋 新任务已添加！');
+}
+
+// ============ 商店 ============
+function renderShop(){
+  document.getElementById('shopGrid').innerHTML=state.shop.map(item=>`
+    <div class="shop-card">
+      <div class="shop-emoji">${item.emoji}</div>
+      <div class="shop-title">${item.name}</div>
+      <div class="shop-desc">${item.desc}</div>
+      ${item.owned>0
+        ?`<div class="shop-owned">已兑换 ×${item.owned}</div>`
+        :`<button class="shop-cost" onclick="redeem('${item.id}')">⭐ ${item.cost} 兑换</button>`
+      }
+    </div>
+  `).join('');
+
+  const logEl=document.getElementById('redeemLog');
+  logEl.innerHTML=`
+    ${isWeekend()?`<div class="weekend-bar">
+      <div class="weekend-title">📅 周末时间管理 🔴进行中</div>
+      <div class="weekend-stats">
+        <div class="weekend-stat"><div class="ws-num">${weekend.total}</div>总时间</div>
+        <div class="weekend-stat"><div class="ws-num" style="color:${weekend.used>weekend.total?'#c0392b':'var(--mint)'}">${weekend.used}</div>已用</div>
+        <div class="weekend-stat"><div class="ws-num" style="color:var(--blue)">${Math.max(0,weekend.total-weekend.used)}</div>剩余</div>
+      </div>
+      ${weekend.confiscated
+        ?'<div class="warning-text">🚫 超出时间！周末使用权已被没收，下周一重置</div>'
+        :`<div style="font-size:11px;color:var(--sub)">💡 超出${weekend.total}分钟将没收周末使用权</div>`}
+      ${isWeekend()&&!weekend.confiscated?`<div style="margin-top:6px"><button class="btn" style="font-size:12px;padding:6px 14px;background:var(--orange);color:#fff;box-shadow:0 3px 0 #e08000" onclick="useWeekendTime(30,'游戏30分钟')">🎮 -30分钟</button> <button class="btn" style="font-size:12px;padding:6px 14px;background:var(--blue);color:#fff;box-shadow:0 3px 0 #3060c0" onclick="useWeekendTime(60,'视频60分钟')">📺 -60分钟</button></div>`:''}
+    </div>`:''}
+    <div style="margin-top:8px;font-size:11px;color:var(--sub)">
+      📜 兑换记录：${state.redeemLog.length?state.redeemLog.slice(-3).reverse().map(r=>'<div>'+r+'</div>').join(''):'暂无'}
+    </div>`;
+}
+
+function redeem(id){
+  const item=state.shop.find(s=>s.id===id);if(!item)return;
+  if(!spendStars(item.cost)){toast('😢 星星不够！');return}
+  item.owned=(item.owned||0)+1;
+  const msg='🎁 兑换了 '+item.name;
+  state.redeemLog.push(new Date().toLocaleDateString()+' '+msg);
+  renderShop();saveState();toast(msg);
+}
+
+// ============ 每日名言 ============
+const dailyQuotes=[
+  '💪 每天进步一点点，目标就会越来越近！',
+  '🌟 今天的努力，是明天成绩单上的分数',
+  '🔥 校前90名不是梦，是每天积累的结果',
+  '📚 学习如逆水行舟，不进则退',
+  '🎯 语文85+ 数学85+ 英语85+ 我能行！',
+  '⭐ 完成今天的小目标，才能实现明天的大目标',
+  '🏆 每个学霸都曾是坚持下来的普通人',
+];
+document.getElementById('dailyQuote').textContent=dailyQuotes[new Date().getDay()];
+
+// ============ 语法漫画 ============
+const grammarComics=[
+  {scene:'教室里 📚',lines:[
+    {char:'🧑',speak:'老师，为什么 He goes to school 不是 He go to school 呀？'},
+    {char:'👩‍🏫',speak:'好问题！因为 He 是第三人称单数~'},
+    {char:'🧑',speak:'什么是第三人称单数？'},
+    {char:'👩‍🏫',speak:'除了"我"和"你"以外的一个人或一个东西！he/she/it/人名都是！'},
+  ],lesson:'✨ 第三人称单数做主语，动词要加 -s 或 -es！'},
+  {scene:'公园里 🌳',lines:[
+    {char:'🐱',speak:'There is some milk.（milk 不可数）'},
+    {char:'🐶',speak:'There are two apples.（apples 可数）'},
+    {char:'🐱',speak:'所以不可数名词用 is，可数复数用 are！'},
+    {char:'🐶',speak:'明白了！看名词能不能数就对了~'},
+  ],lesson:'✨ There be 句型：不可数/单数用 is，复数用 are！'},
+  {scene:'图书馆 📖',lines:[
+    {char:'📘',speak:'I can speak English. 为什么不是 speaks？'},
+    {char:'📗',speak:'因为 can 是情态动词！'},
+    {char:'📘',speak:'情态动词后面动词用原形？'},
+    {char:'📗',speak:'对！can/must/will 后面都加动词原形！'},
+  ],lesson:'✨ can/must/will/may 这些情态动词后面，动词永远用原形！'},
+  {scene:'时空隧道 ⏰',lines:[
+    {char:'🕐',speak:'我昨天干什么了？I did my homework yesterday.'},
+    {char:'🕑',speak:'有 yesterday 就要用过去式！'},
+    {char:'🕐',speak:'do 的过去式是 did，go 是 went~'},
+    {char:'🕑',speak:'看到过去时间词，动词就要变过去式！'},
+  ],lesson:'✨ yesterday/last week/ago 等过去时间词 → 动词用过去式！'},
+  {scene:'游乐园 🎡',lines:[
+    {char:'🎢',speak:'How many apples? 还是 How much apples?'},
+    {char:'🎠',speak:'apples 可数复数 → How many！'},
+    {char:'🎢',speak:'那 milk 呢？'},
+    {char:'🎠',speak:'milk 不可数 → How much！简单吧！'},
+  ],lesson:'✨ 可数复数用 How many，不可数用 How much！'},
+];
+
+function renderGrammarComic(){
+  const idx=state.grammarIdx % grammarComics.length;
+  const c=grammarComics[idx];
+  document.getElementById('comicContent').innerHTML=`
+    <div class="c-scene">${c.scene}</div>
+    ${c.lines.map(l=>`<div><span class="c-char">${l.char}</span><span class="c-speech">${l.speak}</span></div>`).join('')}
+    <div class="c-explain">${c.lesson}</div>`;
+}
+
+// ============ 历史漫画 ============
+const historyComics={
+  '前221年':{emoji:'👑',comic:'秦始皇站在长城上 🏯："六国统一了！从今天起，车同轨、书同文！"'},
+  '前138年':{emoji:'🐫',comic:'张骞骑着骆驼穿过沙漠 🏜️："我要去西域！" 汉武帝挥手送别 👋'},
+  '208年':{emoji:'🔥',comic:'江面上火光冲天 🚢🔥！周瑜大笑："曹操的船都烧起来了！"诸葛亮摇扇轻叹 🪶'},
+  '605年':{emoji:'⛵',comic:'隋炀帝站在龙舟上 👑："从洛阳到杭州，一条大河通南北！" 民夫们汗流浃背 💦'},
+  '627年':{emoji:'🌅',comic:'唐太宗看着繁华的长安城 🏛️："这才是我想看到的天下！" 百姓安居乐业 🏮'},
+  '690年':{emoji:'👸',comic:'武则天登上龙椅 💺："谁说女子不如男？朕就是皇帝！" 群臣跪拜 🙇'},
+};
+
+function renderHistoryTimeline(){
+  document.getElementById('historyTimeline').innerHTML=timelineData.map(t=>{
+    const c=historyComics[t.year];
+    return `<div class="tl-item">
+      <div class="tl-year">${t.year}</div>
+      <div class="tl-event">${t.event}</div>
+      <div class="tl-detail">${t.detail}</div>
+      ${c?`<div style="font-size:11px;color:var(--sub);margin-top:4px;line-height:1.4">${c.emoji} ${c.comic}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ============ 周末管理 ============
+function isWeekend(){const d=new Date().getDay();return d===0||d===6}
+let weekend={used:LS.get('weekendUsed',0),total:LS.get('weekendTotal',480),confiscated:LS.get('weekendConfiscated',false)};
+
+function saveWeekend(){
+  LS.set('weekendUsed',weekend.used);
+  LS.set('weekendTotal',weekend.total);
+  LS.set('weekendConfiscated',weekend.confiscated);
+}
+
+function useWeekendTime(min,what){
+  if(weekend.confiscated){toast('🚫 本周周末权限已被没收！');return false}
+  weekend.used+=min;
+  if(weekend.used>weekend.total){
+    weekend.confiscated=true;
+    saveWeekend();renderShop();
+    toast('⚠️ 超出周末时间！周末使用权被没收！');
+    return false;
+  }
+  saveWeekend();renderShop();
+  toast('🎮 使用 '+what+' ('+min+'分钟) 剩余：'+(weekend.total-weekend.used)+'分钟');
+  return true;
+}
+
+function resetWeekend(){
+  const d=new Date().getDay();
+  if(d===1){weekend.used=0;weekend.confiscated=false;weekend.total=480;saveWeekend()}
+}
+const grammarQuestions=[
+  {q:'He ___ to school every day.',opts:['go','goes','going','went'],ans:1,explain:'主语 He 是第三人称单数，动词加 -s → goes'},
+  {q:'There ___ some milk in the glass.',opts:['is','are','have','has'],ans:0,explain:'milk 不可数，用 is；可数复数用 are'},
+  {q:'She can ___ English very well.',opts:['speaks','speaking','speak','spoke'],ans:2,explain:'can 是情态动词，后面用原形 speak'},
+  {q:'I ___ my homework yesterday.',opts:['do','does','did','doing'],ans:2,explain:'yesterday 过去时间 → 过去式 did'},
+  {q:'How ___ apples do you want?',opts:['much','many','some','any'],ans:1,explain:'apples 可数复数，用 How many'},
+  {q:'We look forward ___ you.',opts:['to see','seeing','to seeing','see'],ans:2,explain:'look forward to + 动词ing'},
+  {q:'The book ___ by Mark Twain.',opts:['wrote','was written','is writing','writes'],ans:1,explain:'被动语态：be + 过去分词'},
+  {q:'___ book is mine.',opts:['This','These','Those','They'],ans:0,explain:'单数近指用 This'},
+];
+
+function renderGrammar(){
+  const q=grammarQuestions[state.grammarIdx];
+  document.getElementById('grammarCard').innerHTML=`
+    <div class="quiz-q">💬 ${q.q}</div>
+    <div class="quiz-opts" id="grammarOpts">
+      ${q.opts.map((o,i)=>`<button class="quiz-opt" onclick="answerGrammar(${i})">${String.fromCharCode(65+i)}. ${o}</button>`).join('')}
+    </div>
+    <div class="quiz-result" id="grammarResult"></div>
+    <div class="quiz-explain" id="grammarExplain" style="display:none"></div>`;
+  renderGrammarComic();
+}
+
+function answerGrammar(idx){
+  const q=grammarQuestions[state.grammarIdx];
+  const opts=document.querySelectorAll('#grammarOpts .quiz-opt');
+  opts.forEach((o,i)=>{if(i===q.ans)o.classList.add('correct');if(i===idx&&idx!==q.ans)o.classList.add('wrong');o.disabled=true});
+  const res=document.getElementById('grammarResult'),expl=document.getElementById('grammarExplain');
+  const correct=idx===q.ans;
+  logQuiz('grammar',q.q,correct);
+  state.dailyCounters.grammar=(state.dailyCounters.grammar||0)+1;
+  // 每日目标：做对10题奖励20⭐（达标时触发）
+  const count=state.dailyCounters.grammar;
+  if(correct){
+    res.className='quiz-result good';res.textContent=`✅ 正确！+3⭐ (今日${count}/10题)`;
+    addStars(3);expl.style.display='block';expl.textContent='💡 '+q.explain;
+    if(count>=10&&!state.tasks.find(t=>t.id===5)?.done){
+      const t5=state.tasks.find(t=>t.id===5);
+      if(t5&&!t5.done){t5.done=true;addStars(20,'🎯 完成10道语法题 +20⭐');logTask(t5.name,t5.subj,20);renderTasks();}
+    }
+    setTimeout(()=>{state.grammarIdx=(state.grammarIdx+1)%grammarQuestions.length;renderGrammar();saveState()},2000);
+  }else{
+    res.className='quiz-result bad';res.textContent=`❌ 答案是 ${String.fromCharCode(65+q.ans)}. ${q.opts[q.ans]} (今日${count}/10题)`;
+    expl.style.display='block';expl.textContent='💡 '+q.explain;
+    if(count>=10&&!state.tasks.find(t=>t.id===5)?.done){
+      const t5=state.tasks.find(t=>t.id===5);
+      if(t5&&!t5.done){t5.done=true;addStars(20,'🎯 完成10道语法题 +20⭐');logTask(t5.name,t5.subj,20);renderTasks();}
+    }
+    setTimeout(()=>{renderGrammar()},2500);
+  }
+}
+
+// ============ 历史 ============
+const historyQuestions=[
+  {q:'中国第一个统一的多民族封建国家是？',opts:['夏朝','商朝','秦朝','汉朝'],ans:2,explain:'公元前221年，秦始皇统一六国建立秦朝'},
+  {q:'造纸术的改进者是谁？',opts:['张衡','蔡伦','毕昇','司马迁'],ans:1,explain:'东汉蔡伦改进了造纸术'},
+  {q:'丝绸之路最早开辟于？',opts:['秦朝','西汉','东汉','唐朝'],ans:1,explain:'西汉张骞出使西域开辟丝绸之路'},
+  {q:'《史记》的作者是？',opts:['班固','司马光','司马迁','左丘明'],ans:2,explain:'司马迁著《史记》，第一部纪传体通史'},
+  {q:'赤壁之战发生在哪一年？',opts:['200年','208年','220年','263年'],ans:1,explain:'208年孙刘联军大败曹操'},
+  {q:'隋朝大运河的中心是？',opts:['长安','洛阳','开封','杭州'],ans:1,explain:'以洛阳为中心，北通涿郡南达余杭'},
+  {q:'科举制度正式创立于？',opts:['汉朝','隋朝','唐朝','宋朝'],ans:1,explain:'隋炀帝设进士科，科举制度正式创立'},
+  {q:'贞观之治是哪位皇帝？',opts:['唐高祖','唐太宗','唐玄宗','武则天'],ans:1,explain:'唐太宗李世民年号贞观'},
+];
+const timelineData=[
+  {year:'前221年',event:'秦统一六国',detail:'中国第一个统一王朝'},
+  {year:'前138年',event:'张骞出使西域',detail:'开辟丝绸之路'},
+  {year:'208年',event:'赤壁之战',detail:'孙刘联军大败曹操'},
+  {year:'605年',event:'大运河开凿',detail:'以洛阳为中心'},
+  {year:'627年',event:'贞观之治',detail:'唐太宗盛世'},
+  {year:'690年',event:'武则天称帝',detail:'唯一的女皇帝'},
+];
+
+function renderHistory(){
+  const q=historyQuestions[state.historyIdx];
+  document.getElementById('historyCard').innerHTML=`
+    <h4 style="margin-bottom:10px">📝 历史问答</h4>
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-opts" id="historyOpts">
+      ${q.opts.map((o,i)=>`<button class="quiz-opt" onclick="answerHistory(${i})">${String.fromCharCode(65+i)}. ${o}</button>`).join('')}
+    </div>
+    <div class="quiz-result" id="historyResult"></div>
+    <div class="quiz-explain" id="historyExplain" style="display:none"></div>`;
+  renderHistoryTimeline();
+}
+
+function answerHistory(idx){
+  const q=historyQuestions[state.historyIdx];
+  const opts=document.querySelectorAll('#historyOpts .quiz-opt');
+  opts.forEach((o,i)=>{if(i===q.ans)o.classList.add('correct');if(i===idx&&idx!==q.ans)o.classList.add('wrong');o.disabled=true});
+  const res=document.getElementById('historyResult'),expl=document.getElementById('historyExplain');
+  const correct=idx===q.ans;
+  logQuiz('history',q.q,correct);
+  state.dailyCounters.history=(state.dailyCounters.history||0)+1;
+  const count=state.dailyCounters.history;
+  if(correct){
+    res.className='quiz-result good';res.textContent=`✅ 正确！+2⭐ (今日${count}/5题)`;
+    addStars(2);expl.style.display='block';expl.textContent='💡 '+q.explain;
+    if(count>=5&&!state.tasks.find(t=>t.id===6)?.done){
+      const t6=state.tasks.find(t=>t.id===6);
+      if(t6&&!t6.done){t6.done=true;addStars(10,'🎯 完成5道历史题 +10⭐');logTask(t6.name,t6.subj,10);renderTasks();}
+    }
+    setTimeout(()=>{state.historyIdx=(state.historyIdx+1)%historyQuestions.length;renderHistory();saveState()},2000);
+  }else{
+    res.className='quiz-result bad';res.textContent=`❌ 答案是 ${String.fromCharCode(65+q.ans)}. ${q.opts[q.ans]} (今日${count}/5题)`;
+    expl.style.display='block';expl.textContent='💡 '+q.explain;
+    if(count>=5&&!state.tasks.find(t=>t.id===6)?.done){
+      const t6=state.tasks.find(t=>t.id===6);
+      if(t6&&!t6.done){t6.done=true;addStars(10,'🎯 完成5道历史题 +10⭐');logTask(t6.name,t6.subj,10);renderTasks();}
+    }
+    setTimeout(()=>{renderHistory()},2500);
+  }
+}
+
+// ============ 图片压缩 ============
+function compressImage(dataUrl,maxWidth=1024,quality=0.7){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      let w=img.width,h=img.height;
+      if(w>maxWidth){h=Math.round(h*maxWidth/w);w=maxWidth;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>reject(new Error('图片加载失败'));
+    img.src=dataUrl;
+  });
+}
+
+// ============ 作业上传 ============
+const hwCheckItems=[];
+
+function uploadHomework(input){
+  const file=input.files[0];if(!file)return;
+  hwCurrentFile=file;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    hwCurrentUrl=e.target.result;
+    document.getElementById('hwPreview').innerHTML=`
+      <img src="${hwCurrentUrl}" class="hw-preview">
+      <div style="margin-top:8px">
+        <button class="btn" style="background:var(--purple);color:#fff;box-shadow:0 4px 0 #8b55d9" id="hwCheckBtn" onclick="aiCheckHomework()">🤖 AI 批改作业</button>
+        <span style="font-size:11px;color:var(--sub);display:block;margin-top:4px">📸 AI 老师逐题批改，拍照即查 ✨</span>
+      </div>
+    `;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function aiCheckHomework(){
+  if(!hwCurrentUrl){toast('请先拍照上传作业');return}
+  const btn=document.getElementById('hwCheckBtn');
+  btn.disabled=true;btn.textContent='⏳ AI 批改中...';
+  toast('🤖 AI 正在识别并逐题批改（约10-20秒）...');
+  try{
+    const compressed=await compressImage(hwCurrentUrl,1024,0.7);
+    // 直接调用 Gemini API（GitHub Pages 无后端）
+    let mimeType='image/jpeg',b64=compressed;
+    const m=compressed.match(/^data:(image\/\w+);base64,(.+)$/);
+    if(m){mimeType=m[1];b64=m[2];}
+    const gResp=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=AIzaSyAVOH8n4zwDOeJzTIloILcSzFy3LyO9Tyc',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({generationConfig:{temperature:0,topP:1,topK:1},
+        contents:[{parts:[{inlineData:{mimeType,b64}},
+          {text:'你是一位耐心的初中老师。请仔细观察图片中的作业，完成以下任务：\n\n1. 识别图片中所有的题目（数学题、英语题、语文题等）\n2. 对于每道题，判断学生写的答案是否正确\n3. 如果答案错误，给出正确答案和简单解释\n\n请严格按以下 JSON 格式返回（不要包含 markdown 代码块标记，只返回纯 JSON）：\n\n{\n  "problems": [\n    {\n      "num": 1,\n      "question": "题目简述",\n      "student_answer": "学生写的答案",\n      "correct_answer": "正确答案",\n      "is_correct": true,\n      "explanation": "解释（如果正确可写正确）"\n    }\n  ],\n  "summary": "总体评价，一两句话即可",\n  "total": 总题数,\n  "correct_count": 做对题数\n}\n\n注意：\n- 务必客观判断，不要猜测不确定的答案\n- 同一张图片每次批改结果应完全一致\n- 如果看不清某些内容，在对应字段标注"看不清"\n- 如果图片中没有题目或无法识别，返回空 problems 数组并在 summary 说明\n- 只返回 JSON，不要任何其他文字'}]}]}
+      })
+    });
+    if(!gResp.ok){throw new Error('Gemini API 错误 ('+gResp.status+')')}
+    const gResult=await gResp.json();
+    const textParts=(gResult.candidates?.[0]?.content?.parts?.filter(p=>p.text)?.map(p=>p.text)?.join('\n')||'');
+    let data;
+    try{data=JSON.parse(textParts.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim())}
+    catch(e){data={problems:[],summary:textParts||'AI分析完成，返回格式异常，请重试',total:0,correct_count:0}}
+    
+    // 渲染逐题结果
+    let html='';
+    if(data.problems&&data.problems.length>0){
+      html+='<div style="background:#fffbf0;padding:14px;border-radius:14px;margin-top:10px;text-align:left;border:2px solid var(--yellow)">';
+      html+='<div style="font-weight:700;color:var(--purple);margin-bottom:8px;font-size:15px">🤖 AI 逐题批改结果</div>';
+      html+=`<div style="font-size:12px;color:var(--sub);margin-bottom:10px;background:#fff;padding:8px;border-radius:10px">📊 <b>${data.correct_count}/${data.total}</b> 道做对 · ${data.summary||''}</div>`;
+      data.problems.forEach(p=>{
+        const icon=p.is_correct?'✅':'❌';
+        const bg=p.is_correct?'#f0fdf0':'#fff5f5';
+        html+=`<div style="background:${bg};padding:10px;border-radius:10px;margin-bottom:6px;font-size:13px;border:1px solid ${p.is_correct?'#c8e6c9':'#ffcdd2'}">
+          <div style="font-weight:700">${icon} 第${p.num}题: ${p.question}</div>
+          <div style="margin-top:4px">📝 你的答案: <b>${p.student_answer}</b></div>
+          ${!p.is_correct?`<div style="color:var(--mint);margin-top:2px">✅ 正确答案: <b>${p.correct_answer}</b></div>`:''}
+          <div style="color:var(--sub);font-size:11px;margin-top:2px">💡 ${p.explanation||''}</div>
+        </div>`;
+      });
+      html+='</div>';
+    }else{
+      html+=`<div style="background:#fffbf0;padding:14px;border-radius:14px;margin-top:10px;text-align:left;border:2px dashed var(--yellow)">
+        <div style="font-weight:700;color:var(--purple);margin-bottom:6px">🤖 AI 批改意见</div>
+        <div style="font-size:13px">${data.summary||'未能识别题目，请确保拍照清晰、光线充足后重试 📸'}</div>
+      </div>`;
+    }
+    // 用 insertAdjacentHTML 避免破坏按钮 DOM 引用
+    document.getElementById('hwPreview').insertAdjacentHTML('beforeend',html);
+    
+    const correct=data.correct_count||0,total=data.total||0;
+    const stars=total>0?Math.round(correct/total*20)+5:5;
+    addStars(stars,`🤖 AI批改 ${correct}/${total} +${stars}⭐`);
+    toast(total>0?`✨ 批改完成！做对 ${correct}/${total} 题`:'🤖 批改完成');
+  }catch(e){
+    toast('😢 批改失败: '+e.message);
+    console.error(e);
+  }
+  btn.disabled=false;btn.textContent='🤖 重新批改';
+  // 添加「提交」和「拍下一科」按钮
+  if(!document.getElementById('hwNextBtn')){
+    document.getElementById('hwPreview').insertAdjacentHTML('beforeend',
+      `<div style="text-align:center;margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn" style="background:var(--purple);color:#fff;box-shadow:0 4px 0 #8b55d9" id="hwSubmitBtn" onclick="submitHomework()">✅ 提交到历史</button>
+        <button class="btn" style="background:var(--mint);color:#fff;box-shadow:0 4px 0 #4a9e5a" id="hwNextBtn" onclick="document.getElementById('hwInput').click()">📸 拍下一科</button>
+      </div>`);
+  }
+}
+
+
+async function submitHomework(){
+  // 上传到 Supabase Storage
+  let imgUrl=hwCurrentUrl;
+  if(hwCurrentFile){
+    try{
+      const fileName='hw_'+Date.now()+'_'+hwCurrentFile.name.replace(/[^a-zA-Z0-9.]/g,'_');
+      const {data,error}=await supabase.storage.from('homework').upload(fileName,hwCurrentFile);
+      if(!error){
+        const {data:urlData}=supabase.storage.from('homework').getPublicUrl(fileName);
+        imgUrl=urlData.publicUrl;
+      }
+    }catch(e){console.log('upload error:',e)}
+  }
+  
+  const record={
+    date:new Date().toLocaleString(),
+    imgUrl,subject:'作业批改'
+  };
+  state.homework.unshift(record);
+  if(state.homework.length>20)state.homework=state.homework.slice(0,20);
+  addStars(5,'📸 作业提交 +5⭐');
+  document.getElementById('hwPreview').innerHTML='';
+  hwCurrentFile=null;hwCurrentUrl=null;
+  document.getElementById('hwInput').value='';
+  renderHomework();saveState();
+  toast('✅ 作业记录已保存');
+}
+
+function renderHomework(){
+  document.getElementById('hwHistory').innerHTML=state.homework.length
+    ?state.homework.map(h=>`
+      <div class="hw-list-item" onclick="window.open('${h.imgUrl}')">
+        ${h.imgUrl?`<img src="${h.imgUrl}" class="hw-list-thumb">`:''}
+        <div class="hw-list-info"><div class="hw-list-name">📸 ${h.date}</div></div>
+      </div>`).join('')
+    :'<div style="color:var(--sub);font-size:13px;text-align:center;padding:20px">还没有提交过作业</div>';
+}
+
+// ============ 背单词 ============
+function addWord(){
+  state.dailyCounters.words=(state.dailyCounters.words||0)+1;
+  const c=state.dailyCounters.words;
+  document.getElementById('wordCount').textContent=c;
+  toast(`📖 +1词 (${c}/20)`);
+  if(c>=20&&!state.tasks.find(t=>t.id===4)?.done){
+    const t4=state.tasks.find(t=>t.id===4);
+    if(t4&&!t4.done){t4.done=true;addStars(10,'🎯 背完20个单词 +10⭐');logTask(t4.name,t4.subj,10);renderTasks();}
+  }
+  saveState();
+}
+
+// ============ 每日重置 ============
+function checkDailyReset(){
+  resetWeekend();
+  if(state.lastStudyDate!==TODAY){
+    if(state.lastStudyDate){
+      const yday=new Date(Date.now()-86400000).toDateString();
+      state.streak=(state.lastStudyDate===yday)?state.streak+1:1;
+    }else{state.streak=1}
+    state.lastStudyDate=TODAY;state.todayStars=0;
+    state.dailyCounters={grammar:0,history:0,words:0};
+    state.tasks=state.tasks.map(t=>({...t,done:false}));
+    saveState();
+  }
+}
+
+// ============ 导航与UI ============
+function switchPanel(panel){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  const pnl=document.getElementById('panel-'+panel);
+  if(pnl)pnl.classList.add('active');
+  if(panel==='tasks')renderTasks();
+  if(panel==='grammar')renderGrammar();
+  if(panel==='history')renderHistory();
+  if(panel==='shop')renderShop();
+  if(panel==='homework')renderHomework();
+  // 高亮对应nav按钮
+  const navBtns=document.querySelectorAll('.nav-item');
+  const tabs=['timer','tasks','grammar','history','homework'];
+  const idx=tabs.indexOf(panel);
+  if(idx>=0&&navBtns[idx])navBtns[idx].classList.add('active');
+}
+
+// ============ 每日进度 ============
+function renderDailyProgress(){
+  const dc=state.dailyCounters||{};
+  const tasksDone=state.tasks.filter(t=>t.done).length;
+  const minutes=Math.floor(state.stars*0.9);
+  const maxMin=480;
+  const prog=document.getElementById('dailyProgress');
+  if(!prog)return;
+  prog.innerHTML=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      <span>📋 任务 <b>${tasksDone}/${state.tasks.length}</b></span>
+      <span>📖 单词 <b>${dc.words||0}/20</b></span>
+      <span>🇬🇧 语法 <b>${dc.grammar||0}/10</b></span>
+      <span>📜 历史 <b>${dc.history||0}/5</b></span>
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:var(--sub);text-align:center">
+      🎮 预计可兑游戏 <b style="color:var(--purple)">~${Math.min(minutes,maxMin)}分钟</b> / 周末${isWeekend()?'进行中':'待解锁'}
+      ${state.stars>=30?` <button class="btn" style="font-size:10px;padding:3px 10px;background:var(--yellow);box-shadow:0 2px 0 #e6b800" onclick="switchPanel('shop')">去兑换</button>`:''}
+    </div>`;
+}
+
+function updateUI(){
+  document.getElementById('totalStars').textContent=state.stars;
+  document.getElementById('totalFocus').textContent=state.focusMinutes;
+  document.getElementById('streakDays').textContent=state.streak;
+  document.getElementById('todayGoal').textContent=state.todayStars+'/100';
+  const wc=document.getElementById('wordCount');if(wc)wc.textContent=state.dailyCounters?.words||0;
+  renderDailyProgress();
+  const names=['学习蛋仔','小蛋黄','蛋白仔','金蛋仔','彩蛋王'];
+  document.getElementById('levelBadge').textContent='🥚 Lv.'+state.level+' '+names[Math.min(state.level-1,4)];
+  const colors=['#ff6b9d','#ff9f43','#feca57','#ffd93d','#a66cff'];
+  document.getElementById('levelBadge').style.background=colors[Math.min(state.level-1,4)];
+}
+
+// ============ 初始化 ============
+const weekDays=['日','一','二','三','四','五','六'];
+const now=new Date();
+document.getElementById('headerDate').textContent=
+  `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${weekDays[now.getDay()]}`;
+checkDailyReset();
+updateUI();renderGrammar();renderHistory();renderShop();renderHomework();renderGrammarComic();
+updateTimerDisplay();
+</script>
+</body>
+</html>
